@@ -8,6 +8,7 @@
 #include <set>
 #include <algorithm>
 #include <string_view>
+#include <optional>
 #include "geo.h"
 struct Stop {
 	std::string name;
@@ -21,11 +22,9 @@ struct BusInfo {
 	int count_stops = 0;
 	int unique_stops = 0;
 	double length = 0.0;
-	bool found = false;
 };
 struct StopInfo {
-	bool found = false;
-	std::set<std::string> buses;
+	std::optional<const std::set<std::string>*> buses = nullptr;
 };
 class TransportCatalogue {
 public:
@@ -36,8 +35,8 @@ public:
 	const Stop* FindStop(std::string_view name) const;
 	const Bus* FindBus(std::string_view name) const;
 
-	BusInfo GetBusInfo(std::string_view bus_name) const;
-	StopInfo GetStopInfo(std::string_view stop_name) const;
+	std::optional<BusInfo> GetBusInfo(std::string_view bus_name) const;
+	std::optional<const std::set<std::string>*> GetStopInfo(std::string_view stop_name) const;
 
 private:
 	std::deque<Stop> stops_;//имя,широта,долгота

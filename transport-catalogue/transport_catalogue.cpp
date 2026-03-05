@@ -44,15 +44,14 @@ const Bus* TransportCatalogue::FindBus(std::string_view name) const {
     return nullptr;
 }
 
-BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
+std::optional<BusInfo> TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
     BusInfo info;
     const Bus* it_bus = FindBus(bus_name);
     //если не найдено
     if (!it_bus) {
-        info.found = false;
-        return info;
+        return std::nullopt;
     }
-    info.found = true;
+
     info.count_stops = it_bus->stops.size();
     std::unordered_set<std::string> unique;
     double lngth = 0.0;
@@ -71,19 +70,16 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
 
     return info;
 }
-StopInfo TransportCatalogue::GetStopInfo(std::string_view stop_name) const {
-    StopInfo info;
+std::optional<const std::set<std::string>*> TransportCatalogue::GetStopInfo(std::string_view stop_name) const {
+
     std::string key(stop_name);
     auto it_stop = info_stop.find(key);//существует ли остановка
-
     if (it_stop == info_stop.end()) {
-        info.found = false;
-        return info;
+        return std::nullopt;
     }
-    info.found = true;
     auto it_buses = stop_to_buses.find(key);
     if (it_buses != stop_to_buses.end()) {
-        info.buses = it_buses->second;
+        return &it_buses->second;
     }
-    return info;
+    return nullptr;
 }
