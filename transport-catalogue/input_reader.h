@@ -37,4 +37,5 @@ namespace reader {
     private:
         std::vector<CommandDescription> commands_;
     };
+    void Read(TransportCatalogue& catalogue, std::istream& input);
 }//reader

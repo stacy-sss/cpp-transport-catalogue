@@ -3,12 +3,43 @@
 namespace stat {
     void ParseAndPrintStat(const TransportCatalogue& transport_catalogue, std::string_view request, std::ostream& output) {
         if (request.substr(0, 3) == "Bus") {
-            std::string bus_name(request.substr(4));
-            transport_catalogue.GetBusInfo(bus_name, output);
+            std::string_view bus_name(request.substr(4));
+            BusInfo info = transport_catalogue.GetBusInfo(bus_name);
+            if (!info.found) {
+                output << "Bus " << bus_name << ": not found" << std::endl;
+            }
+            else {
+                output << "Bus " << bus_name << ": "
+                    << info.count_stops << " stops on route, "
+                    << info.unique_stops << " unique stops, "
+                    << info.length << " route length" << std::endl;
+            }
         }
         if (request.substr(0, 4) == "Stop") {
-            std::string stop_name(request.substr(5));
-            transport_catalogue.GetStopInfo(stop_name, output);
+            std::string_view stop_name(request.substr(5));
+            StopInfo info = transport_catalogue.GetStopInfo(stop_name);
+            if (!info.found) {
+                output << "Stop " << stop_name << ": not found" << std::endl;
+            }
+            else if (info.buses.empty()) {
+                output << "Stop " << stop_name << ": no buses" << std::endl;
+            }
+            else {
+                output << "Stop " << stop_name << ": buses";
+                for (const auto& bus : info.buses) {
+                    output << " " << bus;
+                }
+                output << std::endl;
+            }
+        }
+    }
+    void StatRequest(const TransportCatalogue& transport_catalogue, std::istream& input, std::ostream& output) {
+        int stat_request_count;
+        input >> stat_request_count >> std::ws;
+        for (int i = 0; i < stat_request_count; ++i) {
+            std::string line;
+            std::getline(input, line);
+            ParseAndPrintStat(transport_catalogue, line, output);
         }
     }
 }

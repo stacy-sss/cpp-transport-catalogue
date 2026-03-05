@@ -1,22 +1,26 @@
 #include "transport_catalogue.h"
 #include "geo.h"
 
-void TransportCatalogue::AddStop(std::string name, double latitude, double longitude) {
-    stops_.push_back({ std::move(name), latitude,longitude });
+void TransportCatalogue::AddStop(const std::string& name, geo::Coordinates cord) {
+    Stop stop;
+    stop.name = name;
+    stop.coordinates = cord;
+    stops_.push_back(stop);
     auto it = &stops_.back();
     info_stop[it->name] = it;
 
 }
 
-const Stop* TransportCatalogue::FindStop(const std::string& name) const {
-    auto it = info_stop.find(name);
+const Stop* TransportCatalogue::FindStop(std::string_view name) const {
+    std::string key(name);
+    auto it = info_stop.find(key);
     if (it != info_stop.end()) {
         return it->second;
     }
     return nullptr;
 }
 
-void TransportCatalogue::AddBus(std::string name, std::vector<std::string>& stops) {
+void TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string>& stops) {
     Bus bus;
     bus.name = name;
 
@@ -27,59 +31,59 @@ void TransportCatalogue::AddBus(std::string name, std::vector<std::string>& stop
             stop_to_buses[stop].insert(bus.name);
         }
     }
-    buses_.push_back({ std::move(bus) });
+    buses_.push_back(bus);
     info_bus[buses_.back().name] = &buses_.back();
 }
 
-const Bus* TransportCatalogue::FindBus(const std::string& name) const {
-    auto it = info_bus.find(name);
+const Bus* TransportCatalogue::FindBus(std::string_view name) const {
+    std::string key(name);
+    auto it = info_bus.find(key);
     if (it != info_bus.end()) {
         return it->second;
     }
     return nullptr;
 }
 
-void TransportCatalogue::GetBusInfo(const std::string& bus_name, std::ostream& out) const {
+BusInfo TransportCatalogue::GetBusInfo(std::string_view bus_name) const {
+    BusInfo info;
     const Bus* it_bus = FindBus(bus_name);
     //если не найдено
     if (!it_bus) {
-        out << "Bus " << bus_name << ": not found" << std::endl;
-        return;
+        info.found = false;
+        return info;
     }
-
-    size_t count_stops = it_bus->stops.size();
-    std::unordered_set<std::string> unique_stops;
-    double length = 0.0;
+    info.found = true;
+    info.count_stops = it_bus->stops.size();
+    std::unordered_set<std::string> unique;
+    double lngth = 0.0;
 
     for (size_t i = 0; i < it_bus->stops.size(); i++) {
-        unique_stops.insert(it_bus->stops[i]->name);
+        unique.insert(it_bus->stops[i]->name);
         if (i > 0) {
-            geo::Coordinates from = { it_bus->stops[i - 1]->latitude,it_bus->stops[i - 1]->longitude };
-            geo::Coordinates to = { it_bus->stops[i]->latitude,it_bus->stops[i]->longitude };
-            length += geo::ComputeDistance(from, to);
+            geo::Coordinates from = it_bus->stops[i - 1]->coordinates;
+            geo::Coordinates to = it_bus->stops[i]->coordinates;
+            lngth += geo::ComputeDistance(from, to);
         }
     }
 
-    out << "Bus " << bus_name << ": " << count_stops << " stops on route, " <<
-        unique_stops.size() << " unique stops, " << length << " route length" << std::endl;
+    info.unique_stops = unique.size();
+    info.length = lngth;
+
+    return info;
 }
-void TransportCatalogue::GetStopInfo(const std::string& stop_name, std::ostream& out) const {
-    auto it_stop = info_stop.find(stop_name);//существует ли остановка
+StopInfo TransportCatalogue::GetStopInfo(std::string_view stop_name) const {
+    StopInfo info;
+    std::string key(stop_name);
+    auto it_stop = info_stop.find(key);//существует ли остановка
 
     if (it_stop == info_stop.end()) {
-        out << "Stop " << stop_name << ": not found" << std::endl;
-        return;
+        info.found = false;
+        return info;
     }
-
-    auto it_buses = stop_to_buses.find(stop_name);
-    if (it_buses == stop_to_buses.end() || it_buses->second.empty()) {
-        out << "Stop " << stop_name << ": no buses" << std::endl;
+    info.found = true;
+    auto it_buses = stop_to_buses.find(key);
+    if (it_buses != stop_to_buses.end()) {
+        info.buses = it_buses->second;
     }
-    else {
-        out << "Stop " << stop_name << ": buses";
-        for (const auto& bus : it_buses->second) {
-            out << " " << bus;
-        }
-        out << std::endl;
-    }
+    return info;
 }

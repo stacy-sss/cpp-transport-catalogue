@@ -7,27 +7,37 @@
 #include <unordered_set> 
 #include <set>
 #include <algorithm>
-
+#include <string_view>
+#include "geo.h"
 struct Stop {
 	std::string name;
-	double latitude;//широта
-	double longitude;//долгота
+	geo::Coordinates coordinates;
 };
 struct Bus {
 	std::string name;
 	std::vector<Stop*> stops;
 };
+struct BusInfo {
+	int count_stops = 0;
+	int unique_stops = 0;
+	double length = 0.0;
+	bool found = false;
+};
+struct StopInfo {
+	bool found = false;
+	std::set<std::string> buses;
+};
 class TransportCatalogue {
 public:
 
-	void AddStop(std::string name, double latitude, double longitude);
-	void AddBus(std::string name, std::vector<std::string>& stops);
+	void AddStop(const std::string& name, geo::Coordinates cord);
+	void AddBus(const std::string& name, const std::vector<std::string>& stops);
 
-	const Stop* FindStop(const std::string& name) const;
-	const Bus* FindBus(const std::string& name) const;
+	const Stop* FindStop(std::string_view name) const;
+	const Bus* FindBus(std::string_view name) const;
 
-	void GetBusInfo(const std::string& bus_name, std::ostream& out) const;
-	void GetStopInfo(const std::string& stop_name, std::ostream& out) const;
+	BusInfo GetBusInfo(std::string_view bus_name) const;
+	StopInfo GetStopInfo(std::string_view stop_name) const;
 
 private:
 	std::deque<Stop> stops_;//имя,широта,долгота

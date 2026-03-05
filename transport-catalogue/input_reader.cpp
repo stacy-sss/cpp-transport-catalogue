@@ -103,11 +103,23 @@ namespace reader {
         }
     }
 
+    void Read(TransportCatalogue& catalogue, std::istream& input) {
+        int base_request_count;
+        input >> base_request_count >> std::ws;
+        InputReader reader;
+        for (int i = 0; i < base_request_count; ++i) {
+            std::string line;
+            std::getline(input, line);
+            reader.ParseLine(line);
+        }
+        reader.ApplyCommands(catalogue);
+    }
+
     void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) const {
         for (const auto& com : commands_) {
             if (com.command == "Stop") {
                 geo::Coordinates cord = ParseCoordinates(com.description);
-                catalogue.AddStop(com.id, cord.lat, cord.lng);
+                catalogue.AddStop(com.id, cord);
             }
         }
 
