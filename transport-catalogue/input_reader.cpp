@@ -162,7 +162,7 @@ namespace reader {
                     const Stop* to_stop_ptr = catalogue.FindStop(to_stop);
 
                     if (from_stop && to_stop_ptr) {
-                        catalogue.DistanceOfStop(from_stop, to_stop_ptr, distance);
+                        catalogue.AddDistance(from_stop, to_stop_ptr, distance);
                     }
                 }
             }

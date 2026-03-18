@@ -37,7 +37,7 @@ struct Hasher {
 class TransportCatalogue {
 public:
 
-	void DistanceOfStop(const Stop* ptr1, const Stop* ptr2, int& dist);
+	void AddDistance(const Stop* ptr1, const Stop* ptr2, double dist);
 	int GetDistance(const Stop* ptr1, const Stop* ptr2) const;
 
 	void AddStop(const std::string& name, geo::Coordinates cord);
