@@ -12,7 +12,8 @@ namespace stat {
                 output << "Bus " << bus_name << ": "
                     << info->count_stops << " stops on route, "
                     << info->unique_stops << " unique stops, "
-                    << info->length << " route length" << std::endl;
+                    << info->length << " route length, "
+                    << info->curvature << " curvature" << std::endl;
             }
         }
         if (request.substr(0, 4) == "Stop") {
