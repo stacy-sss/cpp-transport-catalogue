@@ -1,28 +1,13 @@
 #include "transport_catalogue.h"
 #include "geo.h"
 
-void TransportCatalogue::AddDistance(const Stop* ptr1, const Stop* ptr2,  double dist) {
+void TransportCatalogue::AddDistance(const Stop* ptr1, const Stop* ptr2, double dist) {
     if (ptr1 == nullptr || ptr2 == nullptr) {
         return;
     }
-    bool found1 = false;
-    bool found2 = false;
-
-    for (const auto& stop : stops_) {
-        if (&stop == ptr1) {
-            found1 = true;
-        }
-        if (&stop == ptr2) {
-            found2 = true;
-        }
-        if (found1 && found2) {
-            break;
-        }
+    if (FindStop(ptr1->name) == ptr1 && FindStop(ptr2->name) == ptr2) {
+        distance_[{ptr1, ptr2}] = dist;
     }
-    if (!found1 || !found2) {
-        return;
-    }
-    distance_[{ptr1, ptr2}] = dist;
 }
 int TransportCatalogue::GetDistance(const Stop* ptr1, const Stop* ptr2) const {
     auto it1 = distance_.find({ ptr1, ptr2 });
