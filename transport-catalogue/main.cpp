@@ -1,15 +1,13 @@
 #include <iostream>
-#include <string>
-
-#include "input_reader.h"
-#include "stat_reader.h"
-
-using namespace std;
+#include "transport_catalogue.h"
+#include "json_reader.h"
+#include "json.h"
+#include "map_renderer.h"
 
 int main() {
-    TransportCatalogue transport_catalogue;
-
-    reader::Read(transport_catalogue, cin);
-
-    stat::StatRequest(transport_catalogue, cin, cout);
+    transport_catalogue::TransportCatalogue catalog;
+    json::Document input_doc = json::Load(std::cin);
+    json_reader::JsonReader reader(catalog);
+    json::Document output_doc = reader.Process(input_doc.GetRoot());
+    json::Print(output_doc, std::cout);
 }
