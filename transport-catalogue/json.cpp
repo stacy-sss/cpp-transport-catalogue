@@ -1,4 +1,4 @@
-#include "json.h"
+п»ї#include "json.h"
 #include <variant>
 #include <stdexcept>
 #include <sstream>
@@ -13,7 +13,7 @@ namespace json {
 
         void PrintNode(const Node& node, ostream& out);
 
-        //функция для экранирования строк
+        //С„СѓРЅРєС†РёСЏ РґР»СЏ СЌРєСЂР°РЅРёСЂРѕРІР°РЅРёСЏ СЃС‚СЂРѕРє
         string EscapeString(const string& s) {
             ostringstream out;
             for (unsigned char c : s) {
@@ -39,7 +39,7 @@ namespace json {
             return out.str();
         }
 
-        // Перегрузки PrintValue для разных типов
+        // РџРµСЂРµРіСЂСѓР·РєРё PrintValue РґР»СЏ СЂР°Р·РЅС‹С… С‚РёРїРѕРІ
         void PrintValue(std::nullptr_t, std::ostream& out) {
             out << "null"sv;
         }
@@ -60,7 +60,7 @@ namespace json {
             out << '"' << EscapeString(value) << '"';
         }
 
-        // Рекурсивные вызовы для Array и Dict
+        // Р РµРєСѓСЂСЃРёРІРЅС‹Рµ РІС‹Р·РѕРІС‹ РґР»СЏ Array Рё Dict
         void PrintValue(const Array& array, std::ostream& out) {
             out << "["sv;
             for (size_t i = 0; i < array.size(); ++i) {
@@ -140,12 +140,12 @@ namespace json {
                 }
                 };
 
-            // Знак
+            // Р—РЅР°Рє
             if (input.peek() == '-') {
                 read_char();
             }
 
-            // Целая часть
+            // Р¦РµР»Р°СЏ С‡Р°СЃС‚СЊ
             if (input.peek() == '0') {
                 read_char();
             }
@@ -155,14 +155,14 @@ namespace json {
 
             bool is_double = false;
 
-            // Дробная часть
+            // Р”СЂРѕР±РЅР°СЏ С‡Р°СЃС‚СЊ
             if (input.peek() == '.') {
                 read_char();
                 read_digits();
                 is_double = true;
             }
 
-            // Экспонента
+            // Р­РєСЃРїРѕРЅРµРЅС‚Р°
             if (int ch = input.peek(); ch == 'e' || ch == 'E') {
                 read_char();
                 if (ch = input.peek(); ch == '+' || ch == '-') {
@@ -278,14 +278,14 @@ namespace json {
                 if (word != "true") {
                     throw ParsingError("Expected true");
                 }
-                
+
                 if (isalnum(input.peek()) || input.peek() == '_') {
                     throw ParsingError("Invalid token after true");
                 }
                 return Node(true);
             }
             else if (c == 'f') {
-               
+
                 string word;
                 for (int i = 0; i < 5; ++i) {
                     if (!input.get(c)) {
@@ -296,14 +296,14 @@ namespace json {
                 if (word != "false") {
                     throw ParsingError("Expected false");
                 }
-               
+
                 if (isalnum(input.peek()) || input.peek() == '_') {
                     throw ParsingError("Invalid token after false");
                 }
                 return Node(false);
             }
             else if (c == 'n') {
-                
+
                 string word;
                 for (int i = 0; i < 4; ++i) {
                     if (!input.get(c)) {
@@ -314,7 +314,7 @@ namespace json {
                 if (word != "null") {
                     throw ParsingError("Expected null");
                 }
-                
+
                 if (isalnum(input.peek()) || input.peek() == '_') {
                     throw ParsingError("Invalid token after null");
                 }
@@ -328,7 +328,7 @@ namespace json {
         }
     }  // namespace
 
-    // Конструкторы Node
+    // РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂС‹ Node
     Node::Node(Array array) : data_(move(array)) {}
     Node::Node(Dict map) : data_(move(map)) {}
     Node::Node(int value) : data_(value) {}
@@ -342,7 +342,7 @@ namespace json {
         return data_;
     }
 
-    // Проверки типа
+    // РџСЂРѕРІРµСЂРєРё С‚РёРїР°
     bool Node::IsInt() const {
         return holds_alternative<int>(data_);
     }
@@ -375,7 +375,7 @@ namespace json {
         return holds_alternative<Dict>(data_);
     }
 
-    
+
     const Array& Node::AsArray() const {
         if (!IsArray()) {
             throw logic_error("Not an array");
