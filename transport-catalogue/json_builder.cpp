@@ -16,6 +16,7 @@ namespace json {
         stack_.back().expect_key = false;
         return *this;
     }
+
     Builder& Builder::Value(Node value) {
         return ValueInternal(std::move(value));
     }
@@ -28,14 +29,14 @@ namespace json {
             root_ = std::move(node);
             has_root_ = true;
         }
-        else if (!stack_.empty() && stack_.back().type == Builder::Context::DICT && !stack_.back().expect_key) {
+        else if (!stack_.empty() && stack_.back().type == Context::DICT && !stack_.back().expect_key) {
             auto& dict = const_cast<Dict&>(stack_.back().node->AsMap());
-            dict.emplace(std::move(current_key_), std::move(value));
+            dict.emplace(std::move(current_key_), std::move(node));
             stack_.back().expect_key = true;
         }
-        else if (!stack_.empty() && stack_.back().type == Builder::Context::ARRAY) {
+        else if (!stack_.empty() && stack_.back().type == Context::ARRAY) {
             auto& array = const_cast<Array&>(stack_.back().node->AsArray());
-            array.push_back(std::move(value));
+            array.push_back(std::move(node));
         }
         else {
             throw std::logic_error("Value() called in wrong context");
@@ -47,31 +48,27 @@ namespace json {
     DictContext Builder::StartDict() {
         CheckNotBuilt();
 
-        if (!(stack_.empty() && !has_root_) &&
-            !(!stack_.empty() && stack_.back().type == Context::DICT && !stack_.back().expect_key) &&
-            !(!stack_.empty() && stack_.back().type == Context::ARRAY)) {
-            throw std::logic_error("StartDict() called in wrong context");
-        }
-
         Dict dict;
         Node node(std::move(dict));
 
-        if (stack_.empty()) {
+        if (stack_.empty() && !has_root_) {
             root_ = std::move(node);
             has_root_ = true;
-
             stack_.push_back(Context{ Context::DICT, true, &root_ });
         }
-        else if (stack_.back().type == Builder::Context::DICT) {
+        else if (!stack_.empty() && stack_.back().type == Context::DICT && !stack_.back().expect_key) {
             auto& dict_parent = const_cast<Dict&>(stack_.back().node->AsMap());
             auto [it, _] = dict_parent.emplace(std::move(current_key_), std::move(node));
             stack_.back().expect_key = true;
-            stack_.push_back(Builder::Context{ Builder::Context::DICT, true, &it->second });
+            stack_.push_back(Context{ Context::DICT, true, &it->second });
         }
-        else if (stack_.back().type == Context::ARRAY) {
+        else if (!stack_.empty() && stack_.back().type == Context::ARRAY) {
             auto& array = const_cast<Array&>(stack_.back().node->AsArray());
             array.push_back(std::move(node));
             stack_.push_back(Context{ Context::DICT, true, &array.back() });
+        }
+        else {
+            throw std::logic_error("StartDict() called in wrong context");
         }
 
         return *this;
@@ -80,30 +77,27 @@ namespace json {
     ArrayContext Builder::StartArray() {
         CheckNotBuilt();
 
-        if (!(stack_.empty() && !has_root_) &&
-            !(!stack_.empty() && stack_.back().type == Context::DICT && !stack_.back().expect_key) &&
-            !(!stack_.empty() && stack_.back().type == Context::ARRAY)) {
-            throw std::logic_error("StartArray() called in wrong context");
-        }
-
         Array arr;
         Node node(std::move(arr));
 
-        if (stack_.empty()) {
+        if (stack_.empty() && !has_root_) {
             root_ = std::move(node);
             has_root_ = true;
             stack_.push_back(Context{ Context::ARRAY, false, &root_ });
         }
-        else if (stack_.back().type == Builder::Context::DICT) {
+        else if (!stack_.empty() && stack_.back().type == Context::DICT && !stack_.back().expect_key) {
             auto& dict_parent = const_cast<Dict&>(stack_.back().node->AsMap());
             auto [it, _] = dict_parent.emplace(std::move(current_key_), std::move(node));
             stack_.back().expect_key = true;
-            stack_.push_back(Builder::Context{ Builder::Context::ARRAY, false, &it->second });
+            stack_.push_back(Context{ Context::ARRAY, false, &it->second });
         }
-        else if (stack_.back().type == Context::ARRAY) {
+        else if (!stack_.empty() && stack_.back().type == Context::ARRAY) {
             auto& array = const_cast<Array&>(stack_.back().node->AsArray());
             array.push_back(std::move(node));
             stack_.push_back(Context{ Context::ARRAY, false, &array.back() });
+        }
+        else {
+            throw std::logic_error("StartArray() called in wrong context");
         }
 
         return *this;
@@ -111,41 +105,27 @@ namespace json {
 
     Builder& Builder::EndDict() {
         CheckNotBuilt();
-
-        if (stack_.empty()) {
-            throw std::logic_error("EndDict() called with empty stack");
-        }
-
-        if (stack_.back().type != Context::DICT) {
+        if (stack_.empty() || stack_.back().type != Context::DICT) {
             throw std::logic_error("EndDict() called outside a dict");
         }
-
         if (!stack_.back().expect_key) {
             throw std::logic_error("EndDict() called after Key without Value");
         }
-
         stack_.pop_back();
         return *this;
     }
 
     Builder& Builder::EndArray() {
         CheckNotBuilt();
-
-        if (stack_.empty()) {
-            throw std::logic_error("EndArray() called with empty stack");
-        }
-
-        if (stack_.back().type != Context::ARRAY) {
+        if (stack_.empty() || stack_.back().type != Context::ARRAY) {
             throw std::logic_error("EndArray() called outside an array");
         }
-
         stack_.pop_back();
         return *this;
     }
 
     Node Builder::Build() {
         CheckNotBuilt();
-
         if (!stack_.empty()) {
             throw std::logic_error("Build() called with unclosed containers");
         }
@@ -155,10 +135,11 @@ namespace json {
         built_ = true;
         return root_;
     }
+
     void Builder::CheckNotBuilt() const {
         if (built_) {
             throw std::logic_error("Builder already finalized");
         }
     }
 
-}  // namespace json
+} // namespace json

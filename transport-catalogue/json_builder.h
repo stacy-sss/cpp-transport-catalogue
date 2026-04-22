@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "json.h"
 #include <string>
 #include <vector>
@@ -7,11 +6,13 @@
 namespace json {
 
     class Builder;
+    class KeyContext;
+    class DictContext;
+    class ArrayContext;
 
     class BaseContext {
     public:
         BaseContext(Builder& builder) : builder_(builder) {}
-
     protected:
         Builder& builder_;
     };
@@ -19,16 +20,14 @@ namespace json {
     class KeyContext : public BaseContext {
     public:
         KeyContext(Builder& builder) : BaseContext(builder) {}
-
-        class DictContext Value(Node value);
-        class DictContext StartDict();
-        class ArrayContext StartArray();
+        DictContext Value(Node value);
+        DictContext StartDict();
+        ArrayContext StartArray();
     };
 
     class DictContext : public BaseContext {
     public:
         DictContext(Builder& builder) : BaseContext(builder) {}
-
         KeyContext Key(std::string key);
         Builder& EndDict();
     };
@@ -36,7 +35,6 @@ namespace json {
     class ArrayContext : public BaseContext {
     public:
         ArrayContext(Builder& builder) : BaseContext(builder) {}
-
         ArrayContext Value(Node value);
         DictContext StartDict();
         ArrayContext StartArray();
@@ -46,15 +44,13 @@ namespace json {
     class Builder {
     public:
         Builder();
-
         DictContext StartDict();
         ArrayContext StartArray();
         Builder& Value(Node value);
-        Node Build();
-        Builder& ValueInternal(Node value);
         KeyContext Key(std::string key);
         Builder& EndDict();
         Builder& EndArray();
+        Node Build();
 
     private:
         struct Context {
@@ -62,7 +58,6 @@ namespace json {
             Type type;
             bool expect_key;
             Node* node;
-
             Context(Type t, bool ek, Node* n) : type(t), expect_key(ek), node(n) {}
         };
 
@@ -73,11 +68,13 @@ namespace json {
         std::string current_key_;
 
         void CheckNotBuilt() const;
-
+        Builder& ValueInternal(Node value);
+        friend class KeyContext;
+        friend class DictContext;
+        friend class ArrayContext;
     };
 
-
-    // DictContext
+    // Inline implementations
     inline KeyContext DictContext::Key(std::string key) {
         return builder_.Key(std::move(key));
     }
@@ -86,7 +83,6 @@ namespace json {
         return builder_.EndDict();
     }
 
-    // KeyContext
     inline DictContext KeyContext::Value(Node value) {
         builder_.ValueInternal(std::move(value));
         return DictContext(builder_);
@@ -100,7 +96,6 @@ namespace json {
         return builder_.StartArray();
     }
 
-    // ArrayContext
     inline ArrayContext ArrayContext::Value(Node value) {
         builder_.ValueInternal(std::move(value));
         return ArrayContext(builder_);
@@ -118,4 +113,4 @@ namespace json {
         return builder_.EndArray();
     }
 
-}  // namespace json
+} // namespace json

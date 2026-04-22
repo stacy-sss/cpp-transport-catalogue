@@ -1,5 +1,6 @@
 #pragma once
 #include "json.h"
+#include "json_builder.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
@@ -7,6 +8,7 @@
 #include <string>
 
 namespace json_reader {
+
     class JsonReader {
     public:
 
