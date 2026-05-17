@@ -2,7 +2,6 @@
 #include "transport_catalogue.h"
 #include "json_reader.h"
 #include "json.h"
-#include "map_renderer.h"
 
 int main() {
     transport_catalogue::TransportCatalogue catalog;
@@ -10,4 +9,5 @@ int main() {
     json_reader::JsonReader reader(catalog);
     json::Document output_doc = reader.Process(input_doc.GetRoot());
     json::Print(output_doc, std::cout);
+    return 0;
 }

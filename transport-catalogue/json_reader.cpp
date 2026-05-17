@@ -12,6 +12,10 @@ namespace json_reader {
         if (map.count("render_settings")) {
             RenderRequests(map.at("render_settings").AsMap());
         }
+        if (map.count("routing_settings")) {
+            ParseRoutingSettings(map.at("routing_settings").AsMap());
+            BuildRouteGraph();
+        }
         json::Array ar;
         if (map.count("stat_requests")) {
             ar = StatRequests(map.at("stat_requests").AsArray());
@@ -156,6 +160,9 @@ namespace json_reader {
             else if (type == "Map") {
                 responses.push_back(json::Node(MapRequest(req_map)));
             }
+            else if (type == "Route") {
+                responses.push_back(json::Node(RouteRequest(req_map)));
+            }
         }
 
         return responses;
@@ -244,6 +251,121 @@ namespace json_reader {
             .Key("buses").Value(buses_array)
             .EndDict();
         return builder.Build().AsMap();
+    }
+
+    json::Dict JsonReader::RouteRequest(const json::Dict& req) {
+        int request_id = req.at("id").AsInt();
+        std::string from = req.at("from").AsString();
+        std::string to = req.at("to").AsString();
+        //проверяем есть ли остановки from и to
+        if (!catalog_.FindStop(from) || !catalog_.FindStop(to)) {
+            json::Builder builder;
+            builder.StartDict()
+                .Key("request_id").Value(request_id)
+                .Key("error_message").Value(json::Node(std::string("not found")))
+                .EndDict();
+            return builder.Build().AsMap();
+        }
+        if (!route_router_) {
+            json::Builder builder;
+            builder.StartDict()
+                .Key("request_id").Value(request_id)
+                .Key("error_message").Value(json::Node(std::string("routing settings not found")))
+                .EndDict();
+            return builder.Build().AsMap();
+        }
+        auto result = route_router_->BuildRoute(vertex_ids_[from], vertex_ids_[to]);//ищем путь
+        if (!result) {
+            json::Builder builder;
+            builder.StartDict()
+                .Key("request_id").Value(request_id)
+                .Key("error_message").Value(json::Node(std::string("not found")))
+                .EndDict();
+            return builder.Build().AsMap();
+        }
+        //вычисление времени
+        double total_time = result->weight;
+
+        json::Builder builder;
+        auto dict = builder.StartDict()
+            .Key("request_id").Value(request_id)
+            .Key("total_time").Value(total_time)
+            .Key("items").StartArray();
+        for (auto eid : result->edges) {
+            const auto& meta = edge_meta_[eid];//данные (номер автобуса, начало и конец маршрута)
+            const auto& edge = route_graph_->GetEdge(eid);//откуда, куда, время
+
+            // Wait
+            dict.StartDict()
+                .Key("type").Value(json::Node(std::string("Wait")))
+                .Key("stop_name").Value(json::Node(std::string(vertex_stops_[edge.from]->name)))
+                .Key("time").Value(routing_settings_->bus_wait_time)
+                .EndDict();
+
+            //Bus
+            int span_count = static_cast<int>(meta.end_idx - meta.start_idx);
+            double bus_time = edge.weight - routing_settings_->bus_wait_time;
+
+            dict.StartDict()
+                .Key("type").Value(json::Node(std::string("Bus")))
+                .Key("bus").Value(json::Node(std::string(meta.bus_name)))
+                .Key("span_count").Value(span_count)
+                .Key("time").Value(bus_time)
+                .EndDict();
+        }
+        return dict.EndArray().EndDict().Build().AsMap();
+
+    }
+
+    void JsonReader::ParseRoutingSettings(const json::Dict& settings) {
+        RoutingSettings rs;
+        rs.bus_wait_time = settings.at("bus_wait_time").AsInt();
+        rs.bus_velocity = settings.at("bus_velocity").AsDouble();
+        routing_settings_ = std::move(rs);
+    }
+
+    void JsonReader::BuildRouteGraph() {
+        const auto& stops = catalog_.GetStops();
+        const auto& buses = catalog_.GetBuses();
+
+        for (size_t i = 0; i < stops.size(); i++) {
+            vertex_ids_[stops[i].name] = i;
+            vertex_stops_.push_back(&stops[i]);
+        }
+
+        route_graph_.emplace(stops.size());
+
+        for (const auto& bus : buses) {//проходимся по маршрутам автобусов
+            for (size_t start = 0; start < bus.stops.size(); ++start) {//откуда едем
+                double cumulative = 0.0;//общее время
+                for (size_t end = start + 1; end < bus.stops.size(); ++end) {//куда едем
+                    const auto* a = bus.stops[end - 1];
+                    const auto* b = bus.stops[end];
+
+                    double d = catalog_.GetDistance(a, b);
+                    if (d == 0) {
+                        d = catalog_.GetDistance(b, a);
+                    }
+                    if (d == 0) {
+                        d = geo::ComputeDistance(a->coordinates, b->coordinates);
+                    }
+                    double travel_time = d / (routing_settings_->bus_velocity * 1000.0 / 60.0);
+                    cumulative += travel_time;
+
+                    auto eid = route_graph_->AddEdge({
+                        vertex_ids_[bus.stops[start]->name],//откуда
+                        vertex_ids_[b->name],//куда
+                        cumulative + routing_settings_->bus_wait_time//время пути + ожидание
+                    });
+                    if (edge_meta_.size() <= eid) {
+                        edge_meta_.resize(eid + 1);
+                    }
+                    edge_meta_[eid] = { bus.name, start, end };//добавляем данные ребра
+
+                }
+            }
+        }
+        route_router_.emplace(*route_graph_);
     }
 
 } // namespace json_reader
