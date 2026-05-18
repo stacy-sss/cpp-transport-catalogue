@@ -6,6 +6,7 @@
 #include "map_renderer.h"
 #include "graph.h"
 #include "router.h"
+#include "transport_router.h"
 #include <vector>
 #include <string>
 
@@ -42,24 +43,6 @@ namespace json_reader {
         json::Dict MapRequest(const json::Dict& req);
         json::Dict RouteRequest(const json::Dict& req);
 
-        struct RoutingSettings {
-            int bus_wait_time = 0;//время ожидания автобуса
-            double bus_velocity = 0.0;//скорость автобуса
-        };
-        std::optional<RoutingSettings> routing_settings_;
-
-
-        struct EdgeMeta {
-            std::string bus_name;
-            size_t start_idx;   // индекс начальной остановки в маршруте автобуса
-            size_t end_idx;     // индекс конечной остановки в маршруте автобуса
-        };
-        std::vector<EdgeMeta> edge_meta_;//маршрут автобуса
-        std::optional<graph::DirectedWeightedGraph<double>> route_graph_;//граф, содержит все остановки (вершины) и возможные маршруты (ребра) с временем
-        std::optional<graph::Router<double>> route_router_;//кратчайший путь в графе
-        std::unordered_map<std::string, graph::VertexId> vertex_ids_;//связывает название остановки с номером вершины
-        std::vector<const domain::Stop*> vertex_stops_;//по номеру вершины получить указатель на остановку
-
-        void BuildRouteGraph();//строим граф после парсинга данных
+        std::optional<transport_catalogue::TransportRouter> transport_router_;
     };
 }//json_reader
